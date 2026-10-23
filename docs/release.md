@@ -8,18 +8,20 @@
 
 `lua5.1 tools/check_version.lua` がこの一致を検査する。
 
-正式リリースのきっかけは、`main` 上の注釈付きタグだけである。タグの付け方は次の2つである。
+正式リリースは `vMAJOR.MINOR.PATCH` のタグに対して公開する。手順は次のとおり。
 
-GitHub の Actions から **Create release tag** を選び、**Run workflow** を開く。ブランチは `main` のまま、バージョン欄へ `1.0.0` のように入力して実行する。`version.lua` と一致し、同じタグも Release も無く、テストが通ったときだけ `v1.0.0` が push される。`main` 以外を選んだ場合は失敗し、タグは作られない。
+GitHub の Actions から **Release** を選び、**Run workflow** を開く。ブランチは `main` のまま、バージョン欄へ `1.0.0` のように入力して実行する。`version.lua` と一致し、テストが通ったとき、タグが無ければ `v1.0.0` を追加してから ZIP を公開する。タグが既にあり Release が無いときは、そのタグの内容を公開する。同じ ZIP が既についている Release は作り直さない。`main` 以外の手動実行は失敗する。
 
-ローカルから打つ場合は次のとおり。
+タグだけ先に付ける場合は **Create release tag** を使う。そちらのタグ push でも **Release** が動く。
+
+ローカルからタグを打つ場合は次のとおり。
 
 ```
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-タグは `vMAJOR.MINOR.PATCH` だけを受け付ける。`v1.0` や `v1.0.0-beta` は Release ワークフローが失敗し、GitHub Release は作られない。同じタグの Release が既にある場合も失敗し、上書きしない。Pull Request や、通常のブランチ更新だけではタグも Release も作られない。
+タグは `vMAJOR.MINOR.PATCH` だけを受け付ける。`v1.0` や `v1.0.0-beta` は失敗し、GitHub Release は作られない。Release が ZIP 無しで残っている場合も失敗し、上書きしない。Pull Request や、通常のブランチ更新だけではタグも Release も作られない。
 
 ワークフローはテストとZIP検証の後で、いったん下書きの Release を作る。ZIPが添付されていることを確認してから下書きを外す。確認に失敗した場合は、その下書きを削除する。
 

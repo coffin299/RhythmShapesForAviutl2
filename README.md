@@ -100,7 +100,7 @@ https://github.com/coffin299/RhythmShapesForAviutl2/issues
 - 構成: [docs/architecture.md](docs/architecture.md)
 - 音声: [docs/audio-and-beat.md](docs/audio-and-beat.md)
 - テスト: [docs/development.md](docs/development.md)
-- リリース: [docs/release.md](docs/release.md)。Actions の **Create release tag** にバージョンを入力すると、`main` へタグを打てる。
+- リリース: [docs/release.md](docs/release.md)。Actions の **Release** にバージョンを入力すると、無ければタグを追加してから公開する。
 - 変更履歴: [CHANGELOG.md](CHANGELOG.md)
 
 ## ライセンス

@@ -4,37 +4,89 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン MAJOR.MINOR.PATCH（例: 1.0.0）。タグが無ければ追加してから公開する"
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: rhythmshapes-release
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - name: Install Lua 5.1
         run: sudo apt-get update && sudo apt-get install -y lua5.1
-      - name: Validate tag and version
+      - name: Resolve tag
+        id: rel
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF#refs/tags/}"
+          trim() {
+            local v="$1"
+            v="${v#"${v%%[![:space:]]*}"}"
+            v="${v%"${v##*[![:space:]]}"}"
+            printf '%s' "$v"
+          }
+          create=false
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+              echo "manual release only from main (selected: $GITHUB_REF)"
+              exit 1
+            fi
+            ver="$(trim "${INPUT_VERSION}")"
+            ver="${ver#v}"
+            if ! [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "version must be MAJOR.MINOR.PATCH"
+              exit 1
+            fi
+            tag="v$ver"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              git fetch origin "refs/tags/$tag:refs/tags/$tag"
+              git checkout --detach "$tag"
+            else
+              create=true
+            fi
+          fi
           if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "tag must be vMAJOR.MINOR.PATCH"
             exit 1
           fi
-          ver="$(lua5.1 -e 'print(dofile("script/RhythmShapes/version.lua"))')"
-          if [[ "$tag" != "v$ver" ]]; then
-            echo "tag $tag does not match version.lua v$ver"
+          source_ver="$(lua5.1 -e 'print(dofile("script/RhythmShapes/version.lua"))')"
+          if [[ "$tag" != "v$source_ver" ]]; then
+            echo "tag $tag does not match version.lua v$source_ver"
             exit 1
           fi
+          skip=false
+          asset="RhythmShapesForAviutl2-${tag}.zip"
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "release $tag already exists"
-            exit 1
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx "$asset"; then
+              echo "release $tag already has $asset"
+              skip=true
+            else
+              echo "release $tag exists without $asset; not overwriting"
+              exit 1
+            fi
           fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "create=$create" >> "$GITHUB_OUTPUT"
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
       - name: Parse scripts
+        if: steps.rel.outputs.skip != 'true'
         run: |
           set -euo pipefail
           while IFS= read -r file; do
@@ -42,26 +94,40 @@ jobs:
           done < <(find script tools -type f \( -name '*.lua' -o -name '*.obj2' \))
           luac5.1 -p tests/run.lua
       - name: Run tests
+        if: steps.rel.outputs.skip != 'true'
         run: lua5.1 tests/run.lua
       - name: Check version files
+        if: steps.rel.outputs.skip != 'true'
         run: lua5.1 tools/check_version.lua
-      - name: Build zip
-        run: python3 tools/package.py
-      - name: Publish release
+      - name: Create tag
+        if: steps.rel.outputs.skip != 'true' && steps.rel.outputs.create == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.rel.outputs.tag }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF#refs/tags/}"
-          zip="dist/RhythmShapesForAviutl2-${tag}.zip"
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$TAG" -m "RhythmShapes $TAG"
+          git push origin "refs/tags/$TAG"
+      - name: Build zip
+        if: steps.rel.outputs.skip != 'true'
+        run: python3 tools/package.py
+      - name: Publish release
+        if: steps.rel.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.rel.outputs.tag }}
+        run: |
+          set -euo pipefail
+          zip="dist/RhythmShapesForAviutl2-${TAG}.zip"
           test -f "$zip"
-          gh release create "$tag" "$zip" \
-            --title "$tag" \
-            --notes-file "dist/RhythmShapesForAviutl2-${tag}.notes.md" \
+          gh release create "$TAG" "$zip" \
+            --title "$TAG" \
+            --notes-file "dist/RhythmShapesForAviutl2-${TAG}.notes.md" \
             --draft
-          if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -qx "RhythmShapesForAviutl2-${tag}.zip"; then
-            gh release delete "$tag" --yes
+          if ! gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "RhythmShapesForAviutl2-${TAG}.zip"; then
+            gh release delete "$TAG" --yes
             echo "release asset missing"
             exit 1
           fi
-          gh release edit "$tag" --draft=false
+          gh release edit "$TAG" --draft=false
