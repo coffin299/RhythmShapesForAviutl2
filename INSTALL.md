@@ -18,4 +18,4 @@ C:\ProgramData\aviutl2\Script\RhythmShapes\
 
 プレビュー画面へ `RhythmShapes.obj2` と補助 Lua をまとめてドラッグしても配置できます。その場合も、同じフォルダに補助 Lua が残るようにしてください。
 
-更新するときは、古い `Script\RhythmShapes` フォルダを置き換えてから AviUtl2 を再起動します。
+更新するときは、古い `Script\RhythmShapes` フォルダを置き換えてから AviUtl2 を再起動します。`rs_*.lua` が一つでも欠けると、画面に「補助Luaが見つかりません」と出ます。`rs_figure.lua` も同じフォルダに必要です。

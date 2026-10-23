@@ -77,11 +77,27 @@ pcall(function()
     script_path = obj.getinfo("script_path") or ""
 end)
 if script_path ~= "" then
-    package.path = script_path .. "\\?.lua;" .. script_path .. "\\RhythmShapes\\?.lua;" .. package.path
+    local entry = script_path .. "\\RhythmShapes\\?.lua"
+    if not package.path:find(entry, 1, true) then
+        package.path = script_path .. "\\?.lua;" .. entry .. ";" .. package.path
+    end
+end
+
+-- 読み込みに失敗すると package.loaded に印が残り、次フレームは
+-- 「loop or previous error」になる。毎フレーム消してから読み直す。
+local module_names = {
+    "rs_host", "rs_util", "rs_audio", "rs_beat", "rs_grid",
+    "rs_motion", "rs_layout", "rs_shape", "rs_preset", "rs_figure", "version",
+}
+for i = 1, #module_names do
+    package.loaded[module_names[i]] = nil
 end
 
 local ok_req, host = pcall(require, "rs_host")
 if not ok_req then
+    for i = 1, #module_names do
+        package.loaded[module_names[i]] = nil
+    end
     boot_error("RhythmShapes: 補助Luaが見つかりません。\nRhythmShapesフォルダごと配置してください。\n" .. tostring(host))
     return
 end
