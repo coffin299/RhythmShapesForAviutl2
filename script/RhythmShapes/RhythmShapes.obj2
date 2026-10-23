@@ -25,14 +25,14 @@
 --hide@w_high:sync_mode==1
 --group
 --group:図形,true
---select@preset:プリセット=1,カスタム=0,Beat Burst=1,Geometric Orbit=2,Rhythm Grid=3,Bass Pulse=4,Minimal Motion=5
+--select@preset:プリセット=6,カスタム=0,Beat Burst=1,Geometric Orbit=2,Rhythm Grid=3,Bass Pulse=4,Minimal Motion=5,フラット図形=6
 --select@shape:図形=0,円=0,四角=1,三角=2,多角形=3,線=4,混合=5
---select@layout:配置=0,Scatter=0,Grid=1,Orbit=2,Radial=3
+--select@layout:配置=0,Scatter=0,Grid=1,Orbit=2,Radial=3,構図=4
 --hide@shape:preset~=0
 --hide@layout:preset~=0
 --track@count:個数,1,64,24,1
 --track@size:サイズ,4,400,48,1
---color@col:色,0x66ccff
+--color@col:色,0x4ec8f0
 --check@fill:塗り,true
 --check@outline:アウトライン,true
 --track@line_width:線幅,1,40,3,0.1

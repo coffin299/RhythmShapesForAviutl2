@@ -101,6 +101,25 @@ function M.build(spec)
     local dst = {}
     if a <= 0.001 then return dst end
 
+    if kind == "rect" then
+        local w = tonumber(spec.w) or size
+        local h = tonumber(spec.h) or size
+        if w < 0 then w = 0 end
+        if h < 0 then h = 0 end
+        local hw = w * 0.5
+        local hh = h * 0.5
+        -- Y-up で反時計回り。add_fan と同じく中心・次・現在で時計回りにする。
+        local corners = { { -hw, -hh }, { hw, -hh }, { hw, hh }, { -hw, hh } }
+        for i = 1, 4 do
+            local cur = corners[i]
+            local nxt = corners[i % 4 + 1]
+            local x0, y0 = place(cur[1], cur[2], deg, cx, cy)
+            local x1, y1 = place(nxt[1], nxt[2], deg, cx, cy)
+            add_tri(dst, cx, cy, x1, y1, x0, y0, r, g, b, a)
+        end
+        return dst
+    end
+
     if kind == "line" then
         local x0, y0 = place(-radius, 0, deg, cx, cy)
         local x1, y1 = place(radius, 0, deg, cx, cy)

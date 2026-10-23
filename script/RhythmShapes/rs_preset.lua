@@ -3,7 +3,7 @@ local util = require("rs_util")
 local M = {}
 
 M.SHAPES = { "circle", "square", "triangle", "polygon", "line", "mixed" }
-M.LAYOUTS = { "scatter", "grid", "orbit", "radial" }
+M.LAYOUTS = { "scatter", "grid", "orbit", "radial", "figure" }
 M.EASES = { "linear", "outQuad", "outCubic", "outExpo" }
 M.MAPS = { "beat", "downbeat", "rms", "bass", "mid", "high", "transient" }
 
@@ -89,6 +89,19 @@ M.profiles = {
         map_width = "beat",
         gain = 0.35,
     }),
+    [6] = profile({
+        shape = "mixed",
+        layout = "figure",
+        ease = "outQuad",
+        map_scale = "beat",
+        map_rotate = "beat",
+        map_move = "beat",
+        map_alpha = "beat",
+        map_color = "beat",
+        map_width = "beat",
+        map_count = "none",
+        gain = 1,
+    }),
 }
 
 M.names = {
@@ -98,6 +111,7 @@ M.names = {
     [3] = "Rhythm Grid",
     [4] = "Bass Pulse",
     [5] = "Minimal Motion",
+    [6] = "フラット図形",
 }
 
 M.required_keys = {

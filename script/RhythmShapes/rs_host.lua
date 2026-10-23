@@ -6,6 +6,7 @@ local motion = require("rs_motion")
 local layout = require("rs_layout")
 local shape = require("rs_shape")
 local preset = require("rs_preset")
+local figure = require("rs_figure")
 
 local M = {}
 
@@ -82,7 +83,10 @@ function M.build_frame(input)
     sw = M.even(sw)
     sh = M.even(sh)
     local margin = (cfg.size or 32) * 0.5 + (cfg.line_width or 2)
-    local placed = layout.positions(cfg.layout, count, cfg.seed, sw, sh, margin)
+    local placed = {}
+    if cfg.layout ~= "figure" then
+        placed = layout.positions(cfg.layout, count, cfg.seed, sw, sh, margin)
+    end
 
     local decay = (cfg.decay_ms or 180) / 1000
     local function signal(source, index)
@@ -94,6 +98,67 @@ function M.build_frame(input)
             accent = cfg.accent,
             stagger = (index - 1) / count,
         }, cfg.ease)
+    end
+
+    if cfg.layout == "figure" then
+        local parts = figure.parts(sw, sh)
+        local total = #parts
+        local gain = cfg.gain or 1
+        local amt = util.clamp((cfg.scale_amt or 0) / 100, 0, 3) * gain
+        local alpha = (cfg.alpha or 90) / 100
+        local verts = {}
+        for i = 1, total do
+            local p = parts[i]
+            local drv = 0
+            if p.drive and p.drive ~= "none" then
+                drv = util.clamp(motion.driver(p.drive, {
+                    audio = analyzed,
+                    beat = detected,
+                    grid = clock,
+                    decay = decay,
+                    accent = cfg.accent,
+                    stagger = (i - 1) / math.max(total - 1, 1),
+                }, cfg.ease), 0, 1)
+            end
+            local extra = (p.pulse or 0) * amt * drv
+            local sx = 1
+            local sy = 1
+            if p.axis == "x" then
+                sx = 1 + extra
+            elseif p.axis == "y" then
+                sy = 1 + extra
+            elseif p.axis == "both" then
+                sx = 1 + extra
+                sy = 1 + extra
+            end
+            local piece = shape.build({
+                kind = p.kind,
+                x = p.x,
+                y = p.y,
+                size = (p.size or cfg.size) * ((sx + sy) * 0.5),
+                w = (p.w or 0) * sx,
+                h = (p.h or 0) * sy,
+                rotation = p.rot or 0,
+                color = p.bg and cfg.color or 0xffffff,
+                alpha = alpha,
+                fill = true,
+                outline = false,
+            })
+            for v = 1, #piece do
+                verts[#verts + 1] = piece[v]
+            end
+        end
+        return {
+            vertices = verts,
+            shown = total,
+            count = total,
+            audio = analyzed,
+            beat = detected,
+            grid = clock,
+            cfg = cfg,
+            buffer_w = sw,
+            buffer_h = sh,
+        }
     end
 
     local shown = count

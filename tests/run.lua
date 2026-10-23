@@ -23,6 +23,7 @@ local layout = require("rs_layout")
 local shape = require("rs_shape")
 local preset = require("rs_preset")
 local host = require("rs_host")
+local figure = require("rs_figure")
 
 local failed = 0
 local passed = 0
@@ -213,6 +214,8 @@ check("shape vertex counts", function()
     eq(#poly, 18)
     local line = shape.build({ kind = "line", size = 40, line_width = 4, alpha = 1 })
     eq(#line, 6)
+    local rect = shape.build({ kind = "rect", w = 80, h = 20, fill = true, outline = false, alpha = 1 })
+    eq(#rect, 12)
     local both = shape.build({ kind = "square", size = 40, fill = true, outline = true, line_width = 4, alpha = 1 })
     eq(#both % 3, 0)
     assert(#both > #square)
@@ -222,7 +225,7 @@ check("shape vertex counts", function()
 end)
 
 check("presets expose required keys and tracks win", function()
-    for id = 0, 5 do
+    for id = 0, 6 do
         local p = preset.profiles[id]
         assert(p, "missing profile " .. id)
         for i = 1, #preset.required_keys do
@@ -247,6 +250,46 @@ check("presets expose required keys and tracks win", function()
     eq(custom.shape, "square")
     eq(custom.layout, "grid")
     eq(custom.ease, "linear")
+    local flat = preset.apply({ preset = 6, color = 0x4ec8f0, scale_amt = 80, alpha = 100 })
+    eq(flat.layout, "figure")
+end)
+
+check("flat figure stays inside the frame", function()
+    local sw, sh = 1920, 1080
+    local parts = figure.parts(sw, sh)
+    local kinds = {}
+    for i = 1, #parts do
+        local p = parts[i]
+        kinds[p.kind] = true
+        local hw = (p.w or p.size or 0) * 0.5
+        local hh = (p.h or p.size or 0) * 0.5
+        assert(p.x - hw >= -sw * 0.5 - 0.01, p.role or "")
+        assert(p.x + hw <= sw * 0.5 + 0.01, p.role or "")
+        assert(p.y - hh >= -sh * 0.5 - 0.01, p.role or "")
+        assert(p.y + hh <= sh * 0.5 + 0.01, p.role or "")
+    end
+    assert(kinds.rect and kinds.circle and kinds.triangle, "kinds")
+    local frame = host.build_frame({
+        scene_time = 0.5,
+        screen_w = 640,
+        screen_h = 360,
+        ui = {
+            preset = 6,
+            color = 0x112233,
+            scale_amt = 0,
+            alpha = 100,
+            sync_mode = 1,
+            bpm = 126,
+            count = 4,
+            size = 20,
+            fill = true,
+            outline = false,
+        },
+    })
+    eq(frame.cfg.layout, "figure")
+    assert(#frame.vertices >= 36, "vertices")
+    local bg = frame.vertices[1]
+    eq(bg[4], 0x11 / 255)
 end)
 
 check("frame is deterministic across a seek", function()

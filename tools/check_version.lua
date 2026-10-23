@@ -37,6 +37,7 @@ local required = {
     "script/RhythmShapes/rs_grid.lua",
     "script/RhythmShapes/rs_motion.lua",
     "script/RhythmShapes/rs_layout.lua",
+    "script/RhythmShapes/rs_figure.lua",
     "script/RhythmShapes/rs_shape.lua",
     "script/RhythmShapes/rs_preset.lua",
     "script/RhythmShapes/rs_host.lua",
