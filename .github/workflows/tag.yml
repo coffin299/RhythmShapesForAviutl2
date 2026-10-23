@@ -1,0 +1,65 @@
+name: Create release tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン MAJOR.MINOR.PATCH（例: 1.0.0）。version.lua と一致するときだけタグを打つ"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - name: Validate version and create tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "tags can only be created from main (selected: ${GITHUB_REF})"
+            exit 1
+          fi
+          ver="${INPUT_VERSION}"
+          ver="${ver#"${ver%%[![:space:]]*}"}"
+          ver="${ver%"${ver##*[![:space:]]}"}"
+          ver="${ver#v}"
+          if ! [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must be MAJOR.MINOR.PATCH"
+            exit 1
+          fi
+          source_ver="$(lua5.1 -e 'print(dofile("script/RhythmShapes/version.lua"))')"
+          if [[ "$ver" != "$source_ver" ]]; then
+            echo "input $ver does not match version.lua $source_ver"
+            exit 1
+          fi
+          tag="v$ver"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "tag $tag already exists"
+            exit 1
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists"
+            exit 1
+          fi
+          while IFS= read -r file; do
+            luac5.1 -p "$file"
+          done < <(find script tools -type f \( -name '*.lua' -o -name '*.obj2' \))
+          luac5.1 -p tests/run.lua
+          lua5.1 tests/run.lua
+          lua5.1 tools/check_version.lua
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$tag" -m "RhythmShapes $tag"
+          git push origin "refs/tags/$tag"
+          echo "created $tag"
