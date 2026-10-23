@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.lua text eol=lf
+*.obj2 text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.py text eol=lf
