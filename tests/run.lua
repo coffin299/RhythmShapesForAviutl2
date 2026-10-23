@@ -1,10 +1,18 @@
-local root = "."
-if type(arg) == "table" and arg[0] then
-    root = arg[0]:gsub("[\\/][^\\/]+$", "")
-    root = root:gsub("[\\/]tests$", "")
-    if root == "" then root = "." end
+local function repo_root()
+    local src = "."
+    if type(arg) == "table" and type(arg[0]) == "string" and arg[0] ~= "" then
+        src = arg[0]
+    end
+    local dir = src:match("^(.*)[/\\][^/\\]+$") or "."
+    if dir == "tests" or dir:match("[/\\]tests$") then
+        local parent = dir:gsub("[/\\]?tests$", "")
+        if parent == "" then return "." end
+        return parent
+    end
+    return dir
 end
 
+local root = repo_root()
 package.path = root .. "/script/RhythmShapes/?.lua;" .. root .. "\\script\\RhythmShapes\\?.lua;" .. package.path
 
 local audio = require("rs_audio")
